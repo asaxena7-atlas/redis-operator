@@ -145,6 +145,45 @@ func Test_getRedisTLSConfig(t *testing.T) {
 			expectTLS: true,
 		},
 		{
+			name: "TLS enabled with overridden secret keys",
+			setup: func() *k8sClientFake.Clientset {
+				tlsSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "redis-tls-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"custom-ca.pem":   helperReadFile(filepath.Join("..", "..", "tests", "testdata", "secrets", "ca.crt")),
+						"custom-cert.pem": helperReadFile(filepath.Join("..", "..", "tests", "testdata", "secrets", "tls.crt")),
+						"custom-key.pem":  helperReadFile(filepath.Join("..", "..", "tests", "testdata", "secrets", "tls.key")),
+					},
+				}
+				client := k8sClientFake.NewSimpleClientset(tlsSecret)
+				return client
+			},
+			redisCluster: &rcvb2.RedisCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "redis-cluster",
+					Namespace: "default",
+				},
+				Spec: rcvb2.RedisClusterSpec{
+					TLS: &common.TLSConfig{
+						CaKeyFile:   "custom-ca.pem",
+						CertKeyFile: "custom-cert.pem",
+						KeyFile:     "custom-key.pem",
+						Secret: corev1.SecretVolumeSource{
+							SecretName: "redis-tls-secret",
+						},
+					},
+				},
+			},
+			redisInfo: RedisDetails{
+				PodName:   "redis-pod",
+				Namespace: "default",
+			},
+			expectTLS: true,
+		},
+		{
 			name: "TLS enabled but secret not found",
 			setup: func() *k8sClientFake.Clientset {
 				client := k8sClientFake.NewSimpleClientset()
@@ -216,7 +255,7 @@ func Test_getRedisTLSConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := tt.setup()
 
-			tlsConfig := getRedisTLSConfig(context.TODO(), client, tt.redisCluster.Namespace, tt.redisCluster.Spec.TLS.Secret.SecretName, tt.redisInfo.PodName)
+			tlsConfig := getRedisTLSConfig(context.TODO(), client, tt.redisCluster.Namespace, tt.redisCluster.Spec.TLS)
 
 			if tt.expectTLS {
 				require.NotNil(t, tlsConfig, "Expected TLS configuration but got nil")

@@ -653,21 +653,7 @@ func generateInitContainerDef(role, name string, initcontainerParams initContain
 func GenerateTLSEnvironmentVariables(tlsconfig *commonapi.TLSConfig) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 	root := "/tls/"
-
-	// get and set Defaults
-	caCert := "ca.crt"
-	tlsCert := "tls.crt"
-	tlsCertKey := "tls.key"
-
-	if tlsconfig.CaKeyFile != "" {
-		caCert = tlsconfig.CaKeyFile
-	}
-	if tlsconfig.CertKeyFile != "" {
-		tlsCert = tlsconfig.CertKeyFile
-	}
-	if tlsconfig.KeyFile != "" {
-		tlsCertKey = tlsconfig.KeyFile
-	}
+	caCert, tlsCert, tlsCertKey := getTLSSecretKeys(tlsconfig)
 
 	envVars = append(envVars, corev1.EnvVar{
 		Name:  "TLS_MODE",
@@ -715,17 +701,18 @@ func getExporterEnvironmentVariables(params containerParameters) []corev1.EnvVar
 	var envVars []corev1.EnvVar
 	redisHost := "redis://localhost:"
 	if params.TLSConfig != nil {
+		caCert, tlsCert, tlsKey := getTLSSecretKeys(params.TLSConfig)
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REDIS_EXPORTER_TLS_CLIENT_KEY_FILE",
-			Value: "/tls/tls.key",
+			Value: path.Join("/tls/", tlsKey),
 		})
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REDIS_EXPORTER_TLS_CLIENT_CERT_FILE",
-			Value: "/tls/tls.crt",
+			Value: path.Join("/tls/", tlsCert),
 		})
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REDIS_EXPORTER_TLS_CA_CERT_FILE",
-			Value: "/tls/ca.crt",
+			Value: path.Join("/tls/", caCert),
 		})
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REDIS_EXPORTER_SKIP_TLS_VERIFICATION",

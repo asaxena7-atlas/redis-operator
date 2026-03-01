@@ -386,10 +386,18 @@ func TestGetRedisTLSArgs(t *testing.T) {
 		expected   []string
 	}{
 		{
-			name:       "with TLS configuration",
+			name:       "with TLS configuration defaults",
 			tlsConfig:  &common.TLSConfig{},
 			clientHost: "redis-host",
 			expected:   []string{"--tls", "--cacert", "/tls/ca.crt", "--insecure"},
+		},
+		{
+			name: "with TLS configuration override",
+			tlsConfig: &common.TLSConfig{
+				CaKeyFile: "custom-ca.pem",
+			},
+			clientHost: "redis-host",
+			expected:   []string{"--tls", "--cacert", "/tls/custom-ca.pem", "--insecure"},
 		},
 		{
 			name:       "without TLS configuration",

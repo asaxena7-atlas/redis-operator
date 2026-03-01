@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 
+	commonapi "github.com/OT-CONTAINER-KIT/redis-operator/api/common/v1beta2"
 	"github.com/OT-CONTAINER-KIT/redis-operator/internal/util/cryptutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,16 +31,22 @@ func getRedisPassword(ctx context.Context, client kubernetes.Interface, namespac
 	return "", nil
 }
 
-func getRedisTLSConfig(ctx context.Context, client kubernetes.Interface, namespace, tlsSecretName, podName string) *tls.Config {
+func getRedisTLSConfig(ctx context.Context, client kubernetes.Interface, namespace string, tlsConfig *commonapi.TLSConfig) *tls.Config {
+	if tlsConfig == nil || tlsConfig.Secret.SecretName == "" {
+		return nil
+	}
+
+	tlsSecretName := tlsConfig.Secret.SecretName
 	secret, err := client.CoreV1().Secrets(namespace).Get(context.TODO(), tlsSecretName, metav1.GetOptions{})
 	if err != nil {
 		logf.FromContext(ctx).Error(err, "Failed in getting TLS secret", "secretName", tlsSecretName, "namespace", namespace)
 		return nil
 	}
 
-	tlsClientCert, certExists := secret.Data["tls.crt"]
-	tlsClientKey, keyExists := secret.Data["tls.key"]
-	tlsCaCertificate, caExists := secret.Data["ca.crt"]
+	caFile, certFile, keyFile := getTLSSecretKeys(tlsConfig)
+	tlsClientCert, certExists := secret.Data[certFile]
+	tlsClientKey, keyExists := secret.Data[keyFile]
+	tlsCaCertificate, caExists := secret.Data[caFile]
 
 	if !certExists || !keyExists || !caExists {
 		logf.FromContext(ctx).Error(errors.New("required TLS keys are missing in the secret"), "Missing TLS keys in the secret")

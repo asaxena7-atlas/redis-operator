@@ -263,9 +263,10 @@ func ExecuteRedisClusterCommand(ctx context.Context, client kubernetes.Interface
 func getRedisTLSArgs(tlsConfig *commonapi.TLSConfig, clientHost string) []string {
 	cmd := []string{}
 	if tlsConfig != nil {
+		caFile, _, _ := getTLSSecretKeys(tlsConfig)
 		cmd = append(cmd, "--tls")
 		cmd = append(cmd, "--cacert")
-		cmd = append(cmd, "/tls/ca.crt")
+		cmd = append(cmd, "/tls/"+caFile)
 		cmd = append(cmd, "--insecure")
 	}
 	return cmd
@@ -564,7 +565,7 @@ func configureRedisClient(ctx context.Context, client kubernetes.Interface, cr *
 		DB:       0,
 	}
 	if cr.Spec.TLS != nil {
-		opts.TLSConfig = getRedisTLSConfig(ctx, client, cr.Namespace, cr.Spec.TLS.Secret.SecretName, redisInfo.PodName)
+		opts.TLSConfig = getRedisTLSConfig(ctx, client, cr.Namespace, cr.Spec.TLS)
 	}
 	return redis.NewClient(opts)
 }
@@ -687,7 +688,7 @@ func configureRedisReplicationClient(ctx context.Context, client kubernetes.Inte
 		DB:       0,
 	}
 	if cr.Spec.TLS != nil {
-		opts.TLSConfig = getRedisTLSConfig(ctx, client, cr.Namespace, cr.Spec.TLS.Secret.SecretName, podName)
+		opts.TLSConfig = getRedisTLSConfig(ctx, client, cr.Namespace, cr.Spec.TLS)
 	}
 	return redis.NewClient(opts)
 }

@@ -1482,6 +1482,34 @@ func TestGenerateTLSEnvironmentVariables(t *testing.T) {
 	assert.ElementsMatch(t, envVars, expectedEnvVars, "EnvVars generated for TLS config are not as expected")
 }
 
+func TestGenerateTLSEnvironmentVariables_PartialOverride(t *testing.T) {
+	tlsConfig := &common.TLSConfig{
+		CaKeyFile: "custom-ca.pem",
+	}
+
+	envVars := GenerateTLSEnvironmentVariables(tlsConfig)
+
+	expectedEnvVars := []corev1.EnvVar{
+		{
+			Name:  "TLS_MODE",
+			Value: "true",
+		},
+		{
+			Name:  "REDIS_TLS_CA_KEY",
+			Value: path.Join("/tls/", "custom-ca.pem"),
+		},
+		{
+			Name:  "REDIS_TLS_CERT",
+			Value: path.Join("/tls/", "tls.crt"),
+		},
+		{
+			Name:  "REDIS_TLS_CERT_KEY",
+			Value: path.Join("/tls/", "tls.key"),
+		},
+	}
+	assert.ElementsMatch(t, envVars, expectedEnvVars, "EnvVars generated for partial TLS override are not as expected")
+}
+
 func TestGetEnvironmentVariables(t *testing.T) {
 	tests := []struct {
 		name                string
@@ -1695,11 +1723,28 @@ func Test_getExporterEnvironmentVariables(t *testing.T) {
 				},
 			},
 			expectedEnvironment: []corev1.EnvVar{
-				{Name: "REDIS_EXPORTER_TLS_CLIENT_KEY_FILE", Value: "/tls/tls.key"},
-				{Name: "REDIS_EXPORTER_TLS_CLIENT_CERT_FILE", Value: "/tls/tls.crt"},
-				{Name: "REDIS_EXPORTER_TLS_CA_CERT_FILE", Value: "/tls/ca.crt"},
+				{Name: "REDIS_EXPORTER_TLS_CLIENT_KEY_FILE", Value: "/tls/test_tls.key"},
+				{Name: "REDIS_EXPORTER_TLS_CLIENT_CERT_FILE", Value: "/tls/test_tls.crt"},
+				{Name: "REDIS_EXPORTER_TLS_CA_CERT_FILE", Value: "/tls/test_ca.crt"},
 				{Name: "REDIS_EXPORTER_SKIP_TLS_VERIFICATION", Value: "true"},
 				{Name: "TEST_ENV", Value: "test-value"},
+			},
+		},
+		{
+			name: "Test with partial tls override",
+			params: containerParameters{
+				TLSConfig: &common.TLSConfig{
+					CaKeyFile: "custom-ca.pem",
+					Secret: corev1.SecretVolumeSource{
+						SecretName: "tls-secret",
+					},
+				},
+			},
+			expectedEnvironment: []corev1.EnvVar{
+				{Name: "REDIS_EXPORTER_TLS_CLIENT_KEY_FILE", Value: "/tls/tls.key"},
+				{Name: "REDIS_EXPORTER_TLS_CLIENT_CERT_FILE", Value: "/tls/tls.crt"},
+				{Name: "REDIS_EXPORTER_TLS_CA_CERT_FILE", Value: "/tls/custom-ca.pem"},
+				{Name: "REDIS_EXPORTER_SKIP_TLS_VERIFICATION", Value: "true"},
 			},
 		},
 	}
