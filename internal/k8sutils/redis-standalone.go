@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// CreateStandaloneService method will create standalone service for Redis
+// CreateStandaloneService creates or updates the service resources for a standalone Redis instance.
 func CreateStandaloneService(ctx context.Context, cr *rvb2.Redis, cl kubernetes.Interface) error {
 	labels := getRedisLabels(cr.Name, standalone, "standalone", cr.Labels)
 	var epp exporterPortProvider
@@ -80,7 +80,7 @@ func CreateStandaloneService(ctx context.Context, cr *rvb2.Redis, cl kubernetes.
 	return nil
 }
 
-// CreateStandaloneRedis will create a standalone redis setup
+// CreateStandaloneRedis creates or updates the StatefulSet for a standalone Redis instance.
 func CreateStandaloneRedis(ctx context.Context, cr *rvb2.Redis, cl kubernetes.Interface) error {
 	labels := getRedisLabels(cr.Name, standalone, "standalone", cr.Labels)
 	annotations := generateStatefulSetsAnots(cr.ObjectMeta, cr.Spec.KubernetesConfig.IgnoreAnnotations)
@@ -103,7 +103,7 @@ func CreateStandaloneRedis(ctx context.Context, cr *rvb2.Redis, cl kubernetes.In
 	return nil
 }
 
-// generateRedisStandalone generates Redis standalone information
+// generateRedisStandaloneParams builds the StatefulSet parameters for a standalone Redis instance.
 func generateRedisStandaloneParams(cr *rvb2.Redis) statefulSetParameters {
 	replicas := int32(1)
 	var minreadyseconds int32 = 0
@@ -147,7 +147,7 @@ func generateRedisStandaloneParams(cr *rvb2.Redis) statefulSetParameters {
 	return res
 }
 
-// generateRedisStandaloneContainerParams generates Redis container information
+// generateRedisStandaloneContainerParams builds the container parameters for a standalone Redis instance.
 func generateRedisStandaloneContainerParams(cr *rvb2.Redis) containerParameters {
 	trueProperty := true
 	falseProperty := false
@@ -209,7 +209,7 @@ func generateRedisStandaloneContainerParams(cr *rvb2.Redis) containerParameters 
 	return containerProp
 }
 
-// generateRedisStandaloneInitContainerParams generates Redis initcontainer information
+// generateRedisStandaloneInitContainerParams builds the init container parameters for a standalone Redis instance.
 func generateRedisStandaloneInitContainerParams(cr *rvb2.Redis) initContainerParameters {
 	trueProperty := true
 	initcontainerProp := initContainerParameters{}
